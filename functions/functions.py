@@ -1,5 +1,5 @@
 import torch
-from models.generated_v2 import SENet50
+from models.senet50_v2 import SENet50
 
 
 def senet50(num_classes=1, reduction=16):
