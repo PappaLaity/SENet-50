@@ -8,6 +8,7 @@ class CifarImageDataset(Dataset):
         self.annotations = pd.read_csv(csv_file)
         self.image_folder = image_folder
         self.transform = transform
+        self.labels = self.annotations['label']
         self.label2idx = {label: idx for idx, label in enumerate(self.annotations.iloc[:,1].unique())}
 
 
@@ -15,7 +16,7 @@ class CifarImageDataset(Dataset):
         return len(self.annotations)
     
     def __label2idx__(self):
-        print(self.label2idx)
+        return self.label2idx
 
     def __getitem__(self, index):
         img_name = str(self.annotations.iloc[index, 0])+".png" # Assuming image name is in the first column

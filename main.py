@@ -1,30 +1,68 @@
+import pandas as pd
 import torch
-from functions.functions import senet50, test
+import torch.nn as nn
+from functions.functions import evaluate, senet50, train
 from models.dataset import CifarImageDataset
 from torchvision import transforms
-from torch.utils.data import Dataset, DataLoader
+import torchvision.models as models
+from torch.utils.data import DataLoader,random_split
 
 
 
 if __name__ == "__main__":
+
+    device  = "mps" if torch.backends.mps.is_available() else "cpu"
+    # print(df['label'].value_counts())  Balanced Data 5000 for each Category
     # load Data
-    # Example Usage:
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]) # resize it to 224*224
     dataset = CifarImageDataset(csv_file='datasets/cifar-10/trainLabels.csv', image_folder='datasets/cifar-10/train', transform=transform)
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
-    print(dataset.__getitem__(3))
-    # datasets/cifar-10
-    # datasets/cifar-10/trainLabels.csv
-    # datasets/cifar-10/train
+    # Taille des splits
+    train_size = int(0.8 * len(dataset))  # 80% pour train
+    val_size = len(dataset) - train_size  # 20% pour validation
 
-    # print(f"Dataloader len {len(dataloader.dataset)}")
-    # Binaire
-    model_bin = senet50(num_classes=1)
-    out_bin = model_bin(torch.randn(2, 3, 224, 224))
-    print("Binaire:", out_bin.shape)  # torch.Size([2, 1])
+    # Split aléatoire
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+
+    # DataLoaders
+    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False)
+
 
     # Multi-classes (ex: Cifar 10)
-    model_multi = senet50(num_classes=5)
-    out_multi = model_multi(torch.randn(2, 3, 224, 224))
-    print("Multi-classes:", out_multi.shape)  # torch.Size([2, 5])
+    model_multi = senet50(num_classes=10)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(model_multi.parameters(),lr=0.1,momentum=0.9,weight_decay=5e-4)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30)
+    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    print("Model Senet 50")
+    train(model_multi,device,50,train_loader,criterion,optimizer,scheduler)
+    print("Model Senet 50 Evaluation")
+    evaluate(model_multi,val_loader,device) 
+
+    print("Model Resnet 50")
+    model = models.resnet50(weights=None)
+    num_classes = 10
+    model.fc = nn.Linear(model.fc.in_features, num_classes)
+    optimizer = torch.optim.SGD(model.parameters(),lr=0.1,momentum=0.9,weight_decay=5e-4)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30)
+    # scheduler=None
+    train(model,device,50,train_loader,criterion,optimizer,scheduler)
+    print("Model Resnet 50 Evaluation")
+    evaluate(model,val_loader,device) 
+
+    print("Model Resnet 101")
+
+    model101 = models.resnet101(weights=None)
+    num_classes = 10
+    model101.fc = nn.Linear(model.fc.in_features, num_classes)
+    optimizer = torch.optim.Adam(model101.parameters(),lr=0.1,weight_decay=5e-4)
+
+    optimizer = torch.optim.SGD(model101.parameters(),lr=0.1,momentum=0.9,weight_decay=5e-4)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30)
+    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    # scheduler = None
+
+    train(model101,device,50,train_loader,criterion,optimizer,scheduler)
+    print("Model Resnet 101 Evaluation")
+    evaluate(model101,val_loader,device) 
