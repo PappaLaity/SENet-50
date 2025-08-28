@@ -1,7 +1,16 @@
 # Squeeze Excitation Network applied into ResNet-50
 
+## Summary
+-   [Architectures](#architectures)
 
-In this Project we try to reexperiment the Paper Squeeze and Excitation [Paper link]()
+    -   [SE Block](#squeeze-excitation-block-architecture)
+    -   [SE Resnet 50](#se-resnet-50)
+-   [Experimentations](#training-models-and-results)
+    -   [Datasets and Models](#datasets-and-models)
+    -   [Hyperparameters](#hyperparameters)
+    -   [Results](#results)
+
+In this Project we try to reexperiment the [Squeeze And Excitation Paper](https://arxiv.org/abs/1709.01507)
 
 The presentation of this paper is there [Squeeze and Excitation Presentation](presentations/squeeze%20and%20excitation%20v2.pdf)
 
@@ -29,7 +38,7 @@ To verify the effectiveness of the Squeeze Excitation Block, we implement an net
 
 ## Training Models and Results
 
-### Datasets
+### Datasets and Models
 
 For the Processing we train differents models using CIFAR-10 and CIFAR-100. 
 
@@ -40,9 +49,11 @@ The CIFAR-100 dataset as the same as CIFAR-10 consists of 60000 32x32 colour ima
 
 There are 50000 training images and 10000 test images in those 2 Datasets
 
-### Models
 
-For this experimentation we consider our [Se-resnet-50](models/senet50.py) building from scracth, and the Resnet-50 and Resnet-101 imported without pretrained weight.
+For this experimentation we consider principally three models:
+*   [Se-resnet-50](models/senet50.py) building from scracth
+*   Resnet-50 imported without pretrained weight
+*   Resnet-101 imported without pretrained weight.
 
 ### Hyperparameters
 
