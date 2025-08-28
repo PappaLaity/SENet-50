@@ -77,7 +77,7 @@ We run those different with:
     </tr>
     <tr>
         <td><img src="images/cifar10-results.png" alt="Cifar 10 Results"></td>
-        <td><img src="images/cifar10-results.png" alt="Cifar 100 Results"></td>
+        <td><img src="images/cifaar-100.png" alt="Cifar 100 Results"></td>
     </tr>
 </table>
 
