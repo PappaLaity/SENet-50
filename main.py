@@ -1,68 +1,68 @@
 import pandas as pd
 import torch
-import torch.nn as nn
-from functions.functions import evaluate, senet50, train
-from models.dataset import CifarImageDataset
-from torchvision import transforms
-import torchvision.models as models
-from torch.utils.data import DataLoader,random_split
+# import torch.nn as nn
+from functions.functions import  se_resnet50, train_and_evaluate
+# from models.dataset import CifarImageDataset
+import torchvision
+import torchvision.transforms as transforms
+from torchvision.models import resnet50, resnet101
+
 
 
 
 if __name__ == "__main__":
 
     device  = "mps" if torch.backends.mps.is_available() else "cpu"
-    # print(df['label'].value_counts())  Balanced Data 5000 for each Category
-    # load Data
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]) # resize it to 224*224
-    dataset = CifarImageDataset(csv_file='datasets/cifar-10/trainLabels.csv', image_folder='datasets/cifar-10/train', transform=transform)
+    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-    # Taille des splits
-    train_size = int(0.8 * len(dataset))  # 80% pour train
-    val_size = len(dataset) - train_size  # 20% pour validation
+    num_classes = 10 #100 for Cifar-100
 
-    # Split aléatoire
-    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+    # Datasets For Cifar-10
 
-    # DataLoaders
-    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False)
+    trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
+                                            download=True, transform=transform)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=128,
+                                            shuffle=True, num_workers=2)
+
+    testset = torchvision.datasets.CIFAR10(root='./data', train=False,
+                                        download=True, transform=transform)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=128,
+                                            shuffle=False, num_workers=2)
+    
+    # CIFAR 100
+    # trainset = torchvision.datasets.CIFAR100(root='./data', train=True,
+    #                                     download=True, transform=transform)
+    # trainloader = torch.utils.data.DataLoader(trainset, batch_size=128,
+    #                                         shuffle=True, num_workers=2)
+
+    # testset = torchvision.datasets.CIFAR100(root='./data', train=False,
+    #                                     download=True, transform=transform)
+    # testloader = torch.utils.data.DataLoader(testset, batch_size=128,
+    #                                         shuffle=False, num_workers=2)
+
+    results = {}
 
 
-    # Multi-classes (ex: Cifar 10)
-    model_multi = senet50(num_classes=10)
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model_multi.parameters(),lr=0.1,momentum=0.9,weight_decay=5e-4)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30)
-    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-    print("Model Senet 50")
-    train(model_multi,device,50,train_loader,criterion,optimizer,scheduler)
-    print("Model Senet 50 Evaluation")
-    evaluate(model_multi,val_loader,device) 
+    resnet_50_model = resnet50(weights=None, num_classes=10) 
+    resnet_50_accuracy, resnet_50_time = train_and_evaluate(resnet_50_model,'ResNet-50',device,trainloader,testloader)
+    results['ResNet-50'] = {'Accuracy': resnet_50_accuracy, 'Time': resnet_50_time}
 
-    print("Model Resnet 50")
-    model = models.resnet50(weights=None)
-    num_classes = 10
-    model.fc = nn.Linear(model.fc.in_features, num_classes)
-    optimizer = torch.optim.SGD(model.parameters(),lr=0.1,momentum=0.9,weight_decay=5e-4)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30)
-    # scheduler=None
-    train(model,device,50,train_loader,criterion,optimizer,scheduler)
-    print("Model Resnet 50 Evaluation")
-    evaluate(model,val_loader,device) 
+    # Modèle 3: ResNet-101
+    resnet_101_model = resnet101(weights=None, num_classes=10)
+    resnet_101_accuracy, resnet_101_time = train_and_evaluate(resnet_101_model,'ResNet-101',device,trainloader,testloader)
+    results['ResNet-101'] = {'Accuracy': resnet_101_accuracy, 'Time': resnet_101_time}
 
-    print("Model Resnet 101")
+    # Modèle 1: SE-ResNet-50
+    se_resnet_50_model = se_resnet50(num_classes)
+    se_accuracy, se_time = train_and_evaluate(se_resnet_50_model,'SE-ResNet-50',device,trainloader,testloader)
+    results['SE-ResNet-50'] = {'Accuracy': se_accuracy, 'Time': se_time}
 
-    model101 = models.resnet101(weights=None)
-    num_classes = 10
-    model101.fc = nn.Linear(model.fc.in_features, num_classes)
-    optimizer = torch.optim.Adam(model101.parameters(),lr=0.1,weight_decay=5e-4)
-
-    optimizer = torch.optim.SGD(model101.parameters(),lr=0.1,momentum=0.9,weight_decay=5e-4)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30)
-    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-    # scheduler = None
-
-    train(model101,device,50,train_loader,criterion,optimizer,scheduler)
-    print("Model Resnet 101 Evaluation")
-    evaluate(model101,val_loader,device) 
+    # --- 5. Affichage des résultats ---
+    print("\n" + "="*50)
+    print("             RÉSUMÉ DE LA COMPARAISON")
+    print("="*50)
+    for model_name, data in results.items():
+        print(f"Modèle: {model_name}")
+        print(f"  Précision finale: {data['Accuracy']:.2f}%")
+        print(f"  Temps d'entraînement: {data['Time']:.2f} secondes")
+        print("-" * 30)
