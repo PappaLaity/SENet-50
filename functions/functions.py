@@ -144,6 +144,10 @@ def train_and_evaluate_v2(model,model_name,device,trainloader,valloader,testload
             "dataset": datasets,
         },
     ) 
+    train_acc = []
+    train_loss = []
+    val_acc = []
+    val_loss = []
     start_time = time.time()
     for epoch in range(num_epochs):
         model.train()
@@ -171,10 +175,6 @@ def train_and_evaluate_v2(model,model_name,device,trainloader,valloader,testload
         correct = 0
         total = 0
         testing_loss = 0.0
-        train_acc = []
-        train_loss = []
-        val_acc = []
-        val_loss = []
         with torch.no_grad():
             for data in valloader:
                 images, labels = data[0].to(device), data[1].to(device)
