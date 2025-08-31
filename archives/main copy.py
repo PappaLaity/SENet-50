@@ -4,7 +4,6 @@ import torch
 from functions.functions import  se_resnet50, train_and_evaluate, train_and_evaluate_v2
 # from models.dataset import CifarImageDataset
 import torchvision
-import wandb
 import torchvision.transforms as transforms
 from torch.utils.data import random_split
 from torchvision.models import resnet50, resnet101
@@ -13,8 +12,6 @@ from torchvision.models import resnet50, resnet101
 
 
 if __name__ == "__main__":
-
-    wandb.login(key="b1b7206839df8b716bebc62952a19f3a54f2f7b1")
 
     device  = "mps" if torch.backends.mps.is_available() else "cpu"
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -62,28 +59,33 @@ if __name__ == "__main__":
     #                                         shuffle=False, num_workers=2)
 
     results = {}
-    resnet_50_model = resnet50(weights=None, num_classes=num_classes) 
-    resnet_101_model = resnet101(weights=None, num_classes=num_classes)
+
+
+    resnet_50_model = resnet50(weights=None, num_classes=10) 
+    # resnet_50_accuracy, resnet_50_time = train_and_evaluate(resnet_50_model,'ResNet-50',device,trainloader,valloader,testloader)
+    resnet_50_results = train_and_evaluate_v2(resnet_50_model,'ResNet-50',device,trainloader,valloader,testloader)
+    # results['ResNet-50'] = {'Accuracy': resnet_50_accuracy, 'Time': resnet_50_time}
+    results['ResNet-50'] = resnet_50_results
+
+    # Modèle 3: ResNet-101
+    resnet_101_model = resnet101(weights=None, num_classes=10)
+    # resnet_101_accuracy, resnet_101_time = train_and_evaluate(resnet_101_model,'ResNet-101',device,trainloader,valloader,testloader)
+    resnet_101_results = train_and_evaluate_v2(resnet_101_model,'ResNet-101',device,trainloader,valloader,testloader)
+    results['ResNet-101'] = resnet_101_results
+
+    # Modèle 1: SE-ResNet-50
     se_resnet_50_model = se_resnet50(num_classes)
-    models = [resnet_50_model,resnet_101_model,se_resnet_50_model]
-    # models = [resnet_50_model,resnet_101_model]
-    models_name = ['ResNet-50','ResNet-101','SE-ResNet-50']
-    # models_name = ['ResNet-50','ResNet-101']
-
-    for idx,model in enumerate(models):
-        model_name = models_name[idx]
-        result = train_and_evaluate_v2(model,model_name,device,trainloader,valloader,testloader,wandb,"CIFAR-10",10)
-        results[model_name] = result
-
-
-    print(results)
+    # se_accuracy, se_time = train_and_evaluate(se_resnet_50_model,'SE-ResNet-50',device,trainloader,valloader,testloader)
+    se_results = train_and_evaluate_v2(se_resnet_50_model,'SE-ResNet-50',device,trainloader,valloader,testloader)
+    # results['SE-ResNet-50'] = {'Accuracy': se_accuracy, 'Time': se_time}
+    results['SE-ResNet-50'] = se_results
 
     # --- 5. Affichage des résultats ---
-    # print("\n" + "="*50)
-    # print("             COMPARISON")
-    # print("="*50)
-    # for model_name, data in results.items():
-    #     print(f"Model: {model_name}")
-    #     print(f"  Test Accuracy: {data['Accuracy']:.2f}%")
-    #     print(f"  Times: {data['Time']:.2f} seconds")
-    #     print("-" * 30)
+    print("\n" + "="*50)
+    print("             RÉSUMÉ DE LA COMPARAISON")
+    print("="*50)
+    for model_name, data in results.items():
+        print(f"Modèle: {model_name}")
+        print(f"  Précision finale: {data['Accuracy']:.2f}%")
+        print(f"  Temps d'entraînement: {data['Time']:.2f} secondes")
+        print("-" * 30)

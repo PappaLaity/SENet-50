@@ -1,0 +1,3 @@
+- Separate the train datasets with train and validation - Done
+- Add W&B to store results - (train loss, validation loss,learning rate decreasing, Test loss) Done
+- Modify Se-resnet-50 to respect the architecture

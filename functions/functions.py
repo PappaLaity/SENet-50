@@ -120,3 +120,101 @@ def train_and_evaluate(model,model_name,device,trainloader,testloader,num_epochs
     training_time = end_time - start_time
     print(f"--- Entraînement terminé pour {model_name} en {training_time:.2f} secondes. ---")
     return accuracy, training_time
+
+
+def train_and_evaluate_v2(model,model_name,device,trainloader,valloader,testloader,wandb,datasets="CIFAR-10",num_epochs=100):
+
+
+    results = {}
+    model.to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30, 60, 90], gamma=0.1)
+
+    print(f"\n--- Process Beginning {model_name} ---")
+    wandb.init(
+        # Set the project where this run will be logged
+        project="Senet-50",
+        name=f"run_{model_name}_lr{optimizer.param_groups[0]['lr']}",
+        tags=[model_name],
+        # Track hyperparameters and run metadata
+        config={
+            "initial_learning_rate": 0.1,
+            "architecture": "CNN",
+            "dataset": datasets,
+        },
+    ) 
+    train_acc = []
+    train_loss = []
+    val_acc = []
+    val_loss = []
+    start_time = time.time()
+    for epoch in range(num_epochs):
+        model.train()
+        correct = 0
+        total = 0
+        running_loss = 0.0  
+        for i, data in enumerate(trainloader, 0):
+            inputs, labels = data[0].to(device), data[1].to(device)
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+        
+        accuracy = 100 * correct / total
+        scheduler.step()
+
+        # Validation Set Evaluation Model
+        model.eval()
+        correct = 0
+        total = 0
+        testing_loss = 0.0
+        with torch.no_grad():
+            for data in valloader:
+                images, labels = data[0].to(device), data[1].to(device)
+                outputs = model(images)
+                loss = criterion(outputs, labels)
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+                testing_loss += loss.item()
+        
+        accuracy_val = 100 * correct / total
+        print(f'Epoch {epoch + 1}/{num_epochs}, Loss: {running_loss / len(trainloader):.4f}, Accuracy: {accuracy:.2f}%')
+        train_loss.append(running_loss / len(trainloader))
+        val_loss.append(testing_loss / len(valloader))
+        train_acc.append(accuracy)
+        val_acc.append(accuracy_val)
+        wandb.log({"epoch":epoch,"lr":optimizer.param_groups[0]['lr'],"train_loss": running_loss / len(trainloader),"val_loss":testing_loss / len(valloader), "train_acc": accuracy, "val_acc":accuracy_val})
+
+
+    results['training-loss']= train_loss
+    results['validation-loss']= val_loss
+    results['training-accuracy']=train_acc
+    results['validation-accuracy']=val_acc
+    wandb.finish()
+
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data in testloader:
+            images, labels = data[0].to(device), data[1].to(device)
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+            testing_loss += loss.item()
+    accuracy_test = 100 * correct / total
+    results['test_accuracy'] = accuracy_test
+    end_time = time.time()
+    training_time = end_time - start_time
+    print(f"--- Process Finish {model_name} in {training_time:.2f} seconds. ---")
+    return results
